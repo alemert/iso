@@ -1,0 +1,94 @@
+#cloud-config
+autoinstall:
+  version: 1
+  identity:
+    hostname: kubi03
+    username: ubuntu
+    password: 'ubuntu'
+  storage:
+    config:
+      - id: disk-nvme0n1
+        type: disk
+        ptable: gpt
+        path: /dev/nvme0n1
+        wipe: superblock-recursive
+        grub_device: true
+
+      - id: part-efi
+        type: partition
+        device: disk-nvme0n1
+        size: 1G
+        flag: boot
+
+      - id: part-lvm
+        type: partition
+        device: disk-nvme0n1
+        size: -1
+
+      - id: fs-efi
+        type: format
+        volume: part-efi
+        fstype: fat32
+
+      - id: mnt-efi
+        type: mount
+        device: fs-efi
+        path: /boot/efi
+
+      - id: vg_sys
+        type: lvm_volgroup
+        name: vg_sys
+        devices: [part-lvm]
+
+      - id: lv-root
+        type: lvm_partition
+        name: lv_root
+        volgroup: vg_sys
+        size: 10G
+
+      - id: lv-var
+        type: lvm_partition
+        name: lv_var
+        volgroup: vg_sys
+        size: 4G
+
+      - id: lv-home
+        type: lvm_partition
+        name: lv_home
+        volgroup: vg_sys
+        size: 1G
+
+      - id: fs-root
+        type: format
+        volume: lv-root
+        fstype: ext4
+
+      - id: fs-var
+        type: format
+        volume: lv-var
+        fstype: ext4
+
+      - id: fs-home
+        type: format
+        volume: lv-home
+        fstype: ext4
+
+      - id: mnt-root
+        type: mount
+        device: fs-root
+        path: /
+
+      - id: mnt-var
+        type: mount
+        device: fs-var
+        path: /var
+
+      - id: mnt-home
+        type: mount
+        device: fs-home
+        path: /home
+  packages:
+    - ksh
+  ssh:
+    install-server: true
+    enabled-by-default: true
