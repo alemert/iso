@@ -168,9 +168,9 @@ lsblk -o NAME,SIZE,TYPE,MOUNTPOINT "$TARGET_DEV"
 echo
 
 read -r -p "Type YES to continue and erase $TARGET_DEV: " CONFIRM
-if [[ "$CONFIRM" != "YES" ]]; then
-	echo "Aborted."
-	exit 0
+if [[ ! "$CONFIRM" =~ ^([Yy][Ee][Ss])$ ]]; then
+  echo "Aborted."
+  exit 0
 fi
 
 echo "Unmounting mounted partitions on $TARGET_DEV..."
