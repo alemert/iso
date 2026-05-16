@@ -1,28 +1,32 @@
 #cloud-config
 autoinstall:
   version: 1
+  locale: en_US.UTF-8
+  keyboard:
+    layout: de
+    variant: ""
   identity:
     hostname: kubi03
     username: ubuntu
     password: 'ubuntu'
   storage:
     config:
-      - id: disk-nvme0n1
+      - id: disk-sda
         type: disk
         ptable: gpt
-        path: /dev/nvme0n1
+        path: /dev/sda
         wipe: superblock-recursive
         grub_device: true
 
       - id: part-efi
         type: partition
-        device: disk-nvme0n1
+        device: disk-sda
         size: 1G
-        flag: boot
+        flag: [ boot, esp ]
 
       - id: part-lvm
         type: partition
-        device: disk-nvme0n1
+        device: disk-sda
         size: -1
 
       - id: fs-efi
