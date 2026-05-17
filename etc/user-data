@@ -14,7 +14,8 @@ autoinstall:
       - id: disk-sda
         type: disk
         ptable: gpt
-        path: /dev/sda
+        match:
+          size: largest
         wipe: superblock-recursive
         grub_device: true
 
@@ -30,6 +31,11 @@ autoinstall:
         size: 512M
         flag: boot
 
+      - id: part-boot
+        type: partition
+        device: disk-sda
+        size: 1G
+
       - id: part-lvm
         type: partition
         device: disk-sda
@@ -44,6 +50,16 @@ autoinstall:
         type: mount
         device: fs-efi
         path: /boot/efi
+
+      - id: fs-boot
+        type: format
+        volume: part-boot
+        fstype: ext4
+
+      - id: mnt-boot
+        type: mount
+        device: fs-boot
+        path: /boot
 
       - id: vg_sys
         type: lvm_volgroup
