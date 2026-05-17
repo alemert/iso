@@ -9,27 +9,22 @@ autoinstall:
     hostname: kubi03
     username: ubuntu
     password: 'ubuntu'
+  grub:
+    reorder_uefi: false
   storage:
     config:
       - id: disk-sda
         type: disk
         ptable: gpt
-        match:
-          size: largest
+        path: /dev/sda
         wipe: superblock-recursive
-        grub_device: true
-
-      - id: part-bios
-        type: partition
-        device: disk-sda
-        size: 1M
-        flag: bios_grub
 
       - id: part-efi
         type: partition
         device: disk-sda
         size: 512M
         flag: boot
+        grub_device: true
 
       - id: part-boot
         type: partition
