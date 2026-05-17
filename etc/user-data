@@ -6,6 +6,7 @@ autoinstall:
   keyboard:
     layout: de
     variant: ""
+  # Password login here is intended for local console access only.
   identity:
     hostname: kubi03
     username: ubuntu
@@ -124,8 +125,19 @@ autoinstall:
         type: mount
         device: fs-home
         path: /home
+
+  # Extra packages installed during autoinstall.
   packages:
     - ksh
+
+  # SSH server configuration and authorized access keys.
   ssh:
     install-server: true
     enabled-by-default: true
+    authorized-keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINfSQ+TlXJtasYD4fhuja7tZu7PqiOQ4FR+G2Zc3TUYw ubuntu@kubi03
+
+  # Post-install maintenance commands executed inside the target system.
+  late-commands:
+    - curtin in-target --target=/target -- apt-get update
+    - curtin in-target --target=/target -- DEBIAN_FRONTEND=noninteractive apt-get -y upgrade
