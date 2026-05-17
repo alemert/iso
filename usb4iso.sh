@@ -15,6 +15,7 @@ Notes:
 	- This will ERASE all data on the target device.
 	- Target must be the whole device (e.g. /dev/sdb), not a partition (/dev/sdb1).
 	- If -u and -m are provided, a small FAT partition labeled CIDATA is added.
+  - If -u and -m are provided, the ISO is remastered to inject the kernel arg 'autoinstall'.
 EOF
 }
 
@@ -42,6 +43,64 @@ is_block_device() {
 	[[ -b "$dev" ]] || return 1
 	[[ ! "$dev" =~ [0-9]$ ]] || return 1
 	return 0
+}
+
+################################################################################
+# Inject "autoinstall" into kernel cmdlines of extracted boot config files.
+# Read an extracted boot config and add the kernel argument "autoinstall"
+# only to kernel launch lines (linux/append). This avoids the interactive
+# confirmation prompt and keeps repeat runs safe by not duplicating the arg.
+################################################################################
+inject_autoinstall_arg() {
+  local in_file="$1"
+  local out_file="$2"
+  awk '
+  {
+    line=$0
+    # Touch only kernel command lines and keep idempotency if arg already exists.
+    if (line ~ /^[[:space:]]*(linux|append)[[:space:]]/ && line !~ /(^|[[:space:]])autoinstall([[:space:]]|$)/) {
+      # Ubuntu live entries often terminate with " ---"; insert before it.
+      if (line ~ / ---/) {
+        sub(/ ---/, " autoinstall ---", line)
+      } else {
+        line = line " autoinstall"
+      }
+    }
+    print line
+  }
+  ' "$in_file" > "$out_file"
+}
+
+################################################################################
+# Build a modified ISO with autoinstall kernel argument in boot config.
+# Uses xorriso replay mode to preserve bootability metadata.
+################################################################################
+remaster_iso_with_autoinstall() {
+  local src_iso="$1"
+  local dst_iso="$2"
+  local tmp_dir
+  local grub_cfg_src
+  local grub_cfg_dst
+
+  require_cmd xorriso
+  tmp_dir="$(mktemp -d)"
+  grub_cfg_src="$tmp_dir/grub.cfg.src"
+  grub_cfg_dst="$tmp_dir/grub.cfg"
+
+  # UEFI-only flow: patch GRUB config used by modern Ubuntu installer media.
+  if ! xorriso -indev "$src_iso" -osirrox on -extract /boot/grub/grub.cfg "$grub_cfg_src" >/dev/null 2>&1; then
+    rm -rf "$tmp_dir"
+    echo "Error: could not extract /boot/grub/grub.cfg from ISO for UEFI remaster." >&2
+    exit 1
+  fi
+  inject_autoinstall_arg "$grub_cfg_src" "$grub_cfg_dst"
+
+  # Replay ISO boot metadata and replace only edited config files.
+  xorriso -indev "$src_iso" -outdev "$dst_iso" -boot_image any replay \
+    -map "$grub_cfg_dst" /boot/grub/grub.cfg \
+    -commit -end >/dev/null
+
+  rm -rf "$tmp_dir"
 }
 
 ################################################################################
@@ -126,6 +185,9 @@ if [[ ! -f "$ISO_PATH" ]]; then
 	exit 1
 fi
 
+SOURCE_ISO="$ISO_PATH"
+TMP_REMIX_ISO=""
+
 # Validate optional cloud-init inputs: require both files together 
 # and ensure both paths exist.
 if [[ -n "$USER_DATA_PATH" || -n "$META_DATA_PATH" ]]; then
@@ -141,6 +203,13 @@ if [[ -n "$USER_DATA_PATH" || -n "$META_DATA_PATH" ]]; then
 		echo "Error: meta-data file not found: $META_DATA_PATH" >&2
 		exit 1
 	fi
+
+  # Keep original ISO untouched by writing a temporary remastered copy.
+  TMP_REMIX_ISO="$(mktemp --suffix=.iso)"
+  echo "Preparing remastered ISO with autoinstall kernel argument..."
+  remaster_iso_with_autoinstall "$ISO_PATH" "$TMP_REMIX_ISO"
+  # Use the remastered image for dd so first boot is already autoinstall-enabled.
+  SOURCE_ISO="$TMP_REMIX_ISO"
 fi
 
 # Ensure target is a whole disk device (e.g. /dev/sdb), not a partition.
@@ -159,6 +228,7 @@ echo "ISO:     $ISO_PATH"
 echo "DEVICE:  $TARGET_DEV"
 if [[ -n "$USER_DATA_PATH" ]]; then
 	echo "SEED:    user-data=$USER_DATA_PATH meta-data=$META_DATA_PATH"
+  echo "BOOT:    autoinstall kernel argument injected"
 else
 	echo "SEED:    none"
 fi
@@ -183,7 +253,7 @@ done < <(lsblk -ln -o NAME,TYPE "$TARGET_DEV" | awk '$2=="part" {print $1}')
 # Write the ISO to the target device using dd. 
 # This will erase all data on the device.
 echo "Writing ISO to $TARGET_DEV (this may take a while)..."
-dd if="$ISO_PATH" of="$TARGET_DEV" bs=4M status=progress conv=fsync
+dd if="$SOURCE_ISO" of="$TARGET_DEV" bs=4M status=progress conv=fsync
 sync
 
 # If cloud-init seed data was provided, 
@@ -238,6 +308,11 @@ if [[ -n "$USER_DATA_PATH" ]]; then
   trap - EXIT
 
   echo "cloud-init seed written to $CIDATA_PART"
+fi
+
+if [[ -n "$TMP_REMIX_ISO" && -f "$TMP_REMIX_ISO" ]]; then
+  # Remove temporary remastered ISO artifact after writing USB.
+  rm -f "$TMP_REMIX_ISO"
 fi
 
 echo

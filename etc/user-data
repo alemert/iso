@@ -1,6 +1,7 @@
 #cloud-config
 autoinstall:
   version: 1
+  shutdown: poweroff
   locale: en_US.UTF-8
   keyboard:
     layout: de
@@ -8,9 +9,9 @@ autoinstall:
   identity:
     hostname: kubi03
     username: ubuntu
-    password: 'ubuntu'
+    password: '$6$/a6Tqfm2Ecsg9Ipo$UbPgXpRBQW8GJLJvCEziemU7samaDU8hMaCoWQpONgtn1yMnT3etHJ99KKw0RZppt0LfRQiGl0gXcsUqImmLn1'
   grub:
-    reorder_uefi: false
+    reorder_uefi: true
   storage:
     config:
       - id: disk-sda
