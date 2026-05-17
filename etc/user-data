@@ -18,11 +18,17 @@ autoinstall:
         wipe: superblock-recursive
         grub_device: true
 
+      - id: part-bios
+        type: partition
+        device: disk-sda
+        size: 1M
+        flag: bios_grub
+
       - id: part-efi
         type: partition
         device: disk-sda
-        size: 1G
-        flag: [ boot, esp ]
+        size: 512M
+        flag: boot
 
       - id: part-lvm
         type: partition
