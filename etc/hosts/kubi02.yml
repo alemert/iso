@@ -1,0 +1,8 @@
+user-data:
+  autoinstall:
+    identity:
+      hostname: kubi02
+
+meta-data:
+  instance-id: iid-kubi02
+  local-hostname: kubi02
