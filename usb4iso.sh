@@ -47,6 +47,7 @@ is_block_device() {
 
 ################################################################################
 # Inject "autoinstall" into kernel cmdlines of extracted boot config files.
+#
 # Read an extracted boot config and add the kernel argument "autoinstall"
 # only to kernel launch lines (linux/append). This avoids the interactive
 # confirmation prompt and keeps repeat runs safe by not duplicating the arg.
