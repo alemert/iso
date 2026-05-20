@@ -120,4 +120,4 @@ autoinstall:
   # Post-install maintenance commands executed inside the target system.
   late-commands:
     - curtin in-target --target=/target -- apt-get update
-    - curtin in-target --target=/target -- DEBIAN_FRONTEND=noninteractive apt-get -y upgrade
+    - curtin in-target --target=/target -- env DEBIAN_FRONTEND=noninteractive apt-get -y upgrade

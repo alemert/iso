@@ -9,13 +9,15 @@ Usage:
 
 Example:
 	sudo ./usb4iso.sh -i ~/Downloads/linux.iso -d /dev/sdb
-	sudo ./usb4iso.sh -i ~/Downloads/linux.iso -d /dev/sdb -u ./user-data -m ./meta-data
+  sudo ./usb4iso.sh -i ~/Downloads/linux.iso -d /dev/sdb -u ./etc/deploy/kubi03/user-data -m ./etc/deploy/kubi03/meta-data
 
 Notes:
 	- This will ERASE all data on the target device.
 	- Target must be the whole device (e.g. /dev/sdb), not a partition (/dev/sdb1).
 	- If -u and -m are provided, a small FAT partition labeled CIDATA is added.
   - If -u and -m are provided, the ISO is remastered to inject the kernel arg 'autoinstall'.
+  - In this repository, generated seed files are under ./etc/deploy/<host>/.
+  - Optional: set USB4ISO_TMPDIR to control where temporary remastered ISO is created.
 EOF
 }
 
@@ -176,6 +178,7 @@ require_cmd lsblk
 require_cmd dd
 require_cmd sync
 require_cmd sgdisk
+require_cmd wipefs
 require_cmd mkfs.vfat
 require_cmd mount
 require_cmd umount
@@ -206,8 +209,19 @@ if [[ -n "$USER_DATA_PATH" || -n "$META_DATA_PATH" ]]; then
 	fi
 
   # Keep original ISO untouched by writing a temporary remastered copy.
-  TMP_REMIX_ISO="$(mktemp --suffix=.iso)"
+  # We avoid /tmp by default because it is often a small tmpfs; remastering
+  # full Ubuntu installer ISOs there can fail with "Image size exceeds free space".
+  # Defaulting to the ISO directory is usually safer and can be overridden via
+  # USB4ISO_TMPDIR when a different writable location is preferred.
+  TMP_REMIX_PARENT="${USB4ISO_TMPDIR:-$(dirname "$ISO_PATH")}"
+  if [[ ! -d "$TMP_REMIX_PARENT" || ! -w "$TMP_REMIX_PARENT" ]]; then
+    echo "Error: temporary ISO directory is not writable: $TMP_REMIX_PARENT" >&2
+    echo "Hint: set USB4ISO_TMPDIR to a writable location with >=4 GiB free." >&2
+    exit 1
+  fi
+  TMP_REMIX_ISO="$(mktemp "$TMP_REMIX_PARENT/.usb4iso-remix.XXXXXX.iso")"
   echo "Preparing remastered ISO with autoinstall kernel argument..."
+  echo "TMP ISO: $TMP_REMIX_ISO"
   remaster_iso_with_autoinstall "$ISO_PATH" "$TMP_REMIX_ISO"
   # Use the remastered image for dd so first boot is already autoinstall-enabled.
   SOURCE_ISO="$TMP_REMIX_ISO"
@@ -250,6 +264,12 @@ while read -r part _; do
 		umount "/dev/$part" 2>/dev/null || true
 	fi
 done < <(lsblk -ln -o NAME,TYPE "$TARGET_DEV" | awk '$2=="part" {print $1}')
+
+# Clear stale signatures/GPT metadata from previous runs.
+# dd will overwrite the start of the disk, but old metadata near disk end can
+# survive and later confuse partition tools when creating CIDATA.
+wipefs -a -f "$TARGET_DEV"
+sgdisk --zap-all "$TARGET_DEV" >/dev/null 2>&1 || true
 
 # Write the ISO to the target device using dd. 
 # This will erase all data on the device.
