@@ -14,22 +14,32 @@ autoinstall:
     reorder_uefi: true  # Prefer booting the installed disk entry after autoinstall
   storage:
     config:
-      # Primary install disk using GPT for UEFI: hosts EFI, /boot, and LVM partitions.
-      - id: disk-sda
+      # Select the largest available disk so installs do not depend on /dev/sda naming.
+      - id: disk-install
         type: disk
         ptable: gpt
-        path: /dev/sda
+        match:
+          size: largest
         wipe: superblock-recursive
 
-      # Disk layout summary: GPT + UEFI uses separate boot-related entries on purpose:
-      # part-efi/fs-efi/mnt-efi provide the firmware ESP at /boot/efi (FAT32),
-      # while part-boot/fs-boot/mnt-boot provide Linux /boot (ext4) for kernels/initramfs;
-      # the remaining space (part-lvm) is used for root/var/home logical volumes.
+      # BIOS boot partition for legacy firmware on GPT disks.
+      - id: part-bios
+        type: partition
+        device: disk-install
+        size: 1M
+        flag: bios_grub
+        grub_device: true
+
+      # Disk layout summary: GPT with both bootloader modes enabled:
+      # part-bios supports legacy BIOS installs on GPT,
+      # part-efi/fs-efi/mnt-efi provide UEFI ESP at /boot/efi,
+      # part-boot/fs-boot/mnt-boot provide Linux /boot,
+      # and part-lvm is used for root/var/home LVs.
 
       # EFI System Partition (ESP) for UEFI firmware and GRUB boot files.
       - id: part-efi
         type: partition
-        device: disk-sda
+        device: disk-install
         size: 512M
         flag: boot
         grub_device: true
@@ -37,14 +47,14 @@ autoinstall:
       # Dedicated /boot partition for kernel and initramfs outside LVM.
       - id: part-boot
         type: partition
-        device: disk-sda
+        device: disk-install
         size: 1G
 
       # Create LVM volume group vg_sys from the remaining disk partition.
       # Remaining disk space is reserved for LVM volumes.
       - id: part-lvm
         type: partition
-        device: disk-sda
+        device: disk-install
         size: -1
 
       # Format the EFI partition as FAT32 (required for UEFI boot).
