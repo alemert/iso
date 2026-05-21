@@ -14,12 +14,11 @@ autoinstall:
     reorder_uefi: true  # Prefer booting the installed disk entry after autoinstall
   storage:
     config:
-      # Select the largest available disk so installs do not depend on /dev/sda naming.
+      # Use fixed install disk to avoid selecting USB installer media by size.
       - id: disk-install
         type: disk
         ptable: gpt
-        match:
-          size: largest
+        path: /dev/sda
         wipe: superblock-recursive
 
       # BIOS boot partition for legacy firmware on GPT disks.
