@@ -28,11 +28,11 @@ autoinstall:
         flag: bios_grub
       - id: part-boot
         type: partition
-        device: disk-install
+        device: disk-sda
         size: 1G
       - id: part-lvm
         type: partition
-        device: disk-install
+        device: disk-sda
         size: -1
       - id: fs-boot
         type: format
