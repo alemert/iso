@@ -4,6 +4,16 @@ user-data:
       hostname: kubi03
     grub:
       reorder_uefi: true
+    network:
+      version: 2
+      ethernets:
+        all-eth:
+          match:
+            name: "*"
+          dhcp4: true
+          dhcp4-overrides:
+            send-hostname: true
+            hostname: kubi03
 
 meta-data:
   instance-id: iid-kubi03
