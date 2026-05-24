@@ -12,67 +12,36 @@ autoinstall:
     username: ubuntu
     password: '$6$/a6Tqfm2Ecsg9Ipo$UbPgXpRBQW8GJLJvCEziemU7samaDU8hMaCoWQpONgtn1yMnT3etHJ99KKw0RZppt0LfRQiGl0gXcsUqImmLn1'
   grub:
-    reorder_uefi: true # Prefer booting the installed disk entry after autoinstall
+    reorder_uefi: false # Prefer booting the installed disk entry after autoinstall
   storage:
     config:
-      # Use fixed install disk to avoid selecting USB installer media by size.
-      - id: disk-install
+      - id: disk-sda
         type: disk
         ptable: gpt
         path: /dev/sda
         wipe: superblock-recursive
-      # BIOS boot partition for legacy firmware on GPT disks.
+        grub_device: true
       - id: part-bios
         type: partition
-        device: disk-install
+        device: disk-sda
         size: 1M
         flag: bios_grub
-        grub_device: true
-      # Disk layout summary: GPT with both bootloader modes enabled:
-      # part-bios supports legacy BIOS installs on GPT,
-      # part-efi/fs-efi/mnt-efi provide UEFI ESP at /boot/efi,
-      # part-boot/fs-boot/mnt-boot provide Linux /boot,
-      # and part-lvm is used for root/var/home LVs.
-
-      # EFI System Partition (ESP) for UEFI firmware and GRUB boot files.
-      - id: part-efi
-        type: partition
-        device: disk-install
-        size: 512M
-        flag: boot
-        grub_device: true
-      # Dedicated /boot partition for kernel and initramfs outside LVM.
       - id: part-boot
         type: partition
         device: disk-install
         size: 1G
-      # Create LVM volume group vg_sys from the remaining disk partition.
-      # Remaining disk space is reserved for LVM volumes.
       - id: part-lvm
         type: partition
         device: disk-install
         size: -1
-      # Format the EFI partition as FAT32 (required for UEFI boot).
-      - id: fs-efi
-        type: format
-        volume: part-efi
-        fstype: fat32
-      # Mount the EFI partition to the standard UEFI path.
-      - id: mnt-efi
-        type: mount
-        device: fs-efi
-        path: /boot/efi
-      # Format the dedicated /boot partition.
       - id: fs-boot
         type: format
         volume: part-boot
         fstype: ext4
-      # Mount /boot where kernels and initramfs are stored.
       - id: mnt-boot
         type: mount
         device: fs-boot
         path: /boot
-      # LVM volume group aggregating space from part-lvm.
       - id: vg_sys
         type: lvm_volgroup
         name: vg_sys
@@ -129,3 +98,13 @@ autoinstall:
   late-commands:
     - curtin in-target --target=/target -- apt-get update
     - curtin in-target --target=/target -- env DEBIAN_FRONTEND=noninteractive apt-get -y upgrade
+  network:
+    version: 2
+    ethernets:
+      all-eth:
+        match:
+          name: "*"
+        dhcp4: true
+        dhcp4-overrides:
+          send-hostname: true
+          hostname: kubi01

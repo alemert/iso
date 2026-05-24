@@ -2,6 +2,90 @@ user-data:
   autoinstall:
     identity:
       hostname: kubi02
+    grub:
+      reorder_uefi: false
+    network:
+      version: 2
+      ethernets:
+        all-eth:
+          match:
+            name: "*"
+          dhcp4: true
+          dhcp4-overrides:
+            send-hostname: true
+            hostname: kubi02
+    storage:
+      config:
+        - id: disk-sda
+          type: disk
+          ptable: gpt
+          path: /dev/sda
+          wipe: superblock-recursive
+          grub_device: true
+        - id: part-bios
+          type: partition
+          device: disk-sda
+          size: 1M
+          flag: bios_grub
+        - id: part-boot
+          type: partition
+          device: disk-sda
+          size: 1G
+        - id: part-lvm
+          type: partition
+          device: disk-sda
+          size: -1
+        - id: fs-boot
+          type: format
+          volume: part-boot
+          fstype: ext4
+        - id: mnt-boot
+          type: mount
+          device: fs-boot
+          path: /boot
+        - id: vg_sys
+          type: lvm_volgroup
+          name: vg_sys
+          devices: [part-lvm]
+        - id: lv-root
+          type: lvm_partition
+          name: lv_root
+          volgroup: vg_sys
+          size: 8G
+        - id: lv-var
+          type: lvm_partition
+          name: lv_var
+          volgroup: vg_sys
+          size: 4G
+        - id: lv-home
+          type: lvm_partition
+          name: lv_home
+          volgroup: vg_sys
+          size: 1G
+        - id: fs-root
+          type: format
+          volume: lv-root
+          fstype: ext4
+        - id: fs-var
+          type: format
+          volume: lv-var
+          fstype: ext4
+        - id: fs-home
+          type: format
+          volume: lv-home
+          fstype: ext4
+        - id: mnt-root
+          type: mount
+          device: fs-root
+          path: /
+        - id: mnt-var
+          type: mount
+          device: fs-var
+          path: /var
+        - id: mnt-home
+          type: mount
+          device: fs-home
+          path: /home
 
 meta-data:
   instance-id: iid-kubi02
