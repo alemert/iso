@@ -2,6 +2,8 @@ user-data:
   autoinstall:
     identity:
       hostname: kubi03
+    grub:
+      reorder_uefi: true
 
 meta-data:
   instance-id: iid-kubi03
