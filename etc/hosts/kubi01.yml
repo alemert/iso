@@ -2,8 +2,6 @@ user-data:
   autoinstall:
     identity:
       hostname: kubi01
-    grub:
-      reorder_uefi: false
     network:
       version: 2
       ethernets:

@@ -1,0 +1,3 @@
+autoinstall:
+  grub:
+    reorder_uefi: true  # UEFI profile prefers booting installed disk first

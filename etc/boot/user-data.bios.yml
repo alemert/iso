@@ -1,0 +1,3 @@
+autoinstall:
+  grub:
+    reorder_uefi: false  # Legacy BIOS profile keeps UEFI reorder disabled

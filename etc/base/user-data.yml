@@ -10,8 +10,6 @@ autoinstall:
     hostname: default-host
     username: ubuntu
     password: '$6$/a6Tqfm2Ecsg9Ipo$UbPgXpRBQW8GJLJvCEziemU7samaDU8hMaCoWQpONgtn1yMnT3etHJ99KKw0RZppt0LfRQiGl0gXcsUqImmLn1'
-  grub:
-    reorder_uefi: true  # Prefer booting the installed disk entry after autoinstall
   storage:
     config:
       # Use fixed install disk to avoid selecting USB installer media by size.
