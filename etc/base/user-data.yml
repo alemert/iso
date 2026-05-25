@@ -19,28 +19,6 @@ autoinstall:
         path: /dev/sda
         wipe: superblock-recursive
 
-      # BIOS boot partition for legacy firmware on GPT disks.
-      - id: part-bios
-        type: partition
-        device: disk-install
-        size: 1M
-        flag: bios_grub
-        grub_device: true
-
-      # Disk layout summary: GPT with both bootloader modes enabled:
-      # part-bios supports legacy BIOS installs on GPT,
-      # part-efi/fs-efi/mnt-efi provide UEFI ESP at /boot/efi,
-      # part-boot/fs-boot/mnt-boot provide Linux /boot,
-      # and part-lvm is used for root/var/home LVs.
-
-      # EFI System Partition (ESP) for UEFI firmware and GRUB boot files.
-      - id: part-efi
-        type: partition
-        device: disk-install
-        size: 512M
-        flag: boot
-        grub_device: true
-
       # Dedicated /boot partition for kernel and initramfs outside LVM.
       - id: part-boot
         type: partition
@@ -53,18 +31,6 @@ autoinstall:
         type: partition
         device: disk-install
         size: -1
-
-      # Format the EFI partition as FAT32 (required for UEFI boot).
-      - id: fs-efi
-        type: format
-        volume: part-efi
-        fstype: fat32
-
-      # Mount the EFI partition to the standard UEFI path.
-      - id: mnt-efi
-        type: mount
-        device: fs-efi
-        path: /boot/efi
 
       # Format the dedicated /boot partition.
       - id: fs-boot

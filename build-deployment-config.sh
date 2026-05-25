@@ -13,9 +13,9 @@ Examples:
   ./build-deployment-config.sh -h kubi03 -c ./etc -o ./etc/deploy/kubi03
 
 Expected files:
-  <config-dir>/user-data.base.yml (or .yaml)
-  <config-dir>/meta-data.base.yml (or .yaml)
-  Optional: <config-dir>/user-data.bios.yml / user-data.efi.yml (or .yaml)
+  <config-dir>/base/user-data.yml (or .yaml)
+  <config-dir>/base/meta-data.yml (or .yaml)
+  Optional: <config-dir>/boot/user-data.bios.yml / user-data.efi.yml (or .yaml)
   Preferred host files:
     <config-dir>/hosts/<host>/user-data.yml (or .yaml)
     <config-dir>/hosts/<host>/meta-data.yml (or .yaml)
@@ -81,8 +81,8 @@ pick_yaml_file() {
   return 1
 }
 
-USER_BASE="$(pick_yaml_file "$CONFIG_DIR/user-data.base" || true)"
-META_BASE="$(pick_yaml_file "$CONFIG_DIR/meta-data.base" || true)"
+USER_BASE="$(pick_yaml_file "$CONFIG_DIR/base/user-data" || true)"
+META_BASE="$(pick_yaml_file "$CONFIG_DIR/base/meta-data" || true)"
 
 USER_BOOT_FILE=""
 if [[ -n "$BOOT_MODE" ]]; then
@@ -90,7 +90,7 @@ if [[ -n "$BOOT_MODE" ]]; then
     echo "Error: invalid boot mode '$BOOT_MODE'. Expected 'bios' or 'efi'." >&2
     exit 1
   fi
-  USER_BOOT_FILE="$(pick_yaml_file "$CONFIG_DIR/user-data.$BOOT_MODE" || true)"
+  USER_BOOT_FILE="$(pick_yaml_file "$CONFIG_DIR/boot/user-data.$BOOT_MODE" || true)"
 fi
 
 HOST_USER_FILE=""
@@ -116,17 +116,17 @@ if [[ -z "$OUTPUT_DIR" ]]; then
 fi
 
 if [[ -z "$USER_BASE" || ! -f "$USER_BASE" ]]; then
-  echo "Error: missing base user-data file: $CONFIG_DIR/user-data.base.yml(.yaml)" >&2
+  echo "Error: missing base user-data file: $CONFIG_DIR/base/user-data.yml(.yaml)" >&2
   exit 1
 fi
 
 if [[ -z "$META_BASE" || ! -f "$META_BASE" ]]; then
-  echo "Error: missing base meta-data file: $CONFIG_DIR/meta-data.base.yml(.yaml)" >&2
+  echo "Error: missing base meta-data file: $CONFIG_DIR/base/meta-data.yml(.yaml)" >&2
   exit 1
 fi
 
 if [[ -n "$BOOT_MODE" && ( -z "$USER_BOOT_FILE" || ! -f "$USER_BOOT_FILE" ) ]]; then
-  echo "Error: missing boot override file: $CONFIG_DIR/user-data.$BOOT_MODE.yml(.yaml)" >&2
+  echo "Error: missing boot override file: $CONFIG_DIR/boot/user-data.$BOOT_MODE.yml(.yaml)" >&2
   exit 1
 fi
 
@@ -189,8 +189,8 @@ OUT_META="$OUTPUT_DIR/meta-data"
 # and host overrides from left to right (later wins).
 # The whole grouped block is redirected once to $OUT_USER.
 # Example with three inputs:
-#   input 0: ./etc/user-data.base.yml
-#   input 1: ./etc/user-data.bios.yml
+#   input 0: ./etc/base/user-data.yml
+#   input 1: ./etc/boot/user-data.bios.yml
 #   input 2: ./etc/hosts/kubi03/user-data.yml
 USER_MERGE_FILES=("$USER_BASE")
 if [[ -n "$USER_BOOT_FILE" ]]; then
@@ -200,7 +200,13 @@ USER_MERGE_FILES+=("$TMP_USER")
 
 {
   echo "#cloud-config"
-  yq eval-all '. as $doc ireduce ({}; . * $doc)' "${USER_MERGE_FILES[@]}"
+  yq eval-all '
+    . as $doc ireduce ({};
+      . as $acc
+      | ($acc * $doc)
+      | .autoinstall.storage.config = (($doc.autoinstall.storage.config // []) + ($acc.autoinstall.storage.config // []))
+    )
+  ' "${USER_MERGE_FILES[@]}"
 } > "$OUT_USER"
 
 yq eval-all '. as $doc ireduce ({}; . * $doc)' "$META_BASE" "$TMP_META" > "$OUT_META"

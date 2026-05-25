@@ -1,3 +1,12 @@
 autoinstall:
   grub:
     reorder_uefi: false  # Legacy BIOS profile keeps UEFI reorder disabled
+  storage:
+    config:
+      # BIOS boot partition for legacy firmware on GPT disks.
+      - id: part-bios
+        type: partition
+        device: disk-install
+        size: 1M
+        flag: bios_grub
+        grub_device: true
