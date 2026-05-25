@@ -16,7 +16,7 @@ user-data:
             hostname: kubi02
     storage:
       config:
-        - id: disk-sda
+        - id: disk-install
           type: disk
           ptable: gpt
           path: /dev/sda
@@ -24,16 +24,16 @@ user-data:
           grub_device: true
         - id: part-bios
           type: partition
-          device: disk-sda
+          device: disk-install
           size: 1M
           flag: bios_grub
         - id: part-boot
           type: partition
-          device: disk-sda
+          device: disk-install
           size: 1G
         - id: part-lvm
           type: partition
-          device: disk-sda
+          device: disk-install
           size: -1
         - id: fs-boot
           type: format
