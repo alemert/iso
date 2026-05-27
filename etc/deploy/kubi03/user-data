@@ -24,12 +24,6 @@ autoinstall:
         type: partition
         device: disk-install
         size: 1G
-      # Create LVM volume group vg_sys from the remaining disk partition.
-      # Remaining disk space is reserved for LVM volumes.
-      - id: part-lvm
-        type: partition
-        device: disk-install
-        size: -1
       # Format the dedicated /boot partition.
       - id: fs-boot
         type: format
@@ -40,6 +34,29 @@ autoinstall:
         type: mount
         device: fs-boot
         path: /boot
+      # EFI System Partition (ESP) for UEFI firmware and GRUB boot files.
+      - id: part-efi
+        type: partition
+        device: disk-install
+        size: 512M
+        flag: boot
+        grub_device: true
+      # Format the EFI partition as FAT32 (required for UEFI boot).
+      - id: fs-efi
+        type: format
+        volume: part-efi
+        fstype: fat32
+      # Mount the EFI partition to the standard UEFI path.
+      - id: mnt-efi
+        type: mount
+        device: fs-efi
+        path: /boot/efi
+      # Create LVM volume group vg_sys from the remaining disk partition.
+      # Remaining disk space is reserved for LVM volumes.
+      - id: part-lvm
+        type: partition
+        device: disk-install
+        size: -1
       # LVM volume group aggregating space from part-lvm.
       - id: vg_sys
         type: lvm_volgroup
@@ -84,23 +101,6 @@ autoinstall:
         type: mount
         device: fs-home
         path: /home
-      # EFI System Partition (ESP) for UEFI firmware and GRUB boot files.
-      - id: part-efi
-        type: partition
-        device: disk-install
-        size: 512M
-        flag: boot
-        grub_device: true
-      # Format the EFI partition as FAT32 (required for UEFI boot).
-      - id: fs-efi
-        type: format
-        volume: part-efi
-        fstype: fat32
-      # Mount the EFI partition to the standard UEFI path.
-      - id: mnt-efi
-        type: mount
-        device: fs-efi
-        path: /boot/efi
   # Extra packages installed during autoinstall.
   packages:
     - ksh

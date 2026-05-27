@@ -24,12 +24,6 @@ autoinstall:
         type: partition
         device: disk-install
         size: 1G
-      # Create LVM volume group vg_sys from the remaining disk partition.
-      # Remaining disk space is reserved for LVM volumes.
-      - id: part-lvm
-        type: partition
-        device: disk-install
-        size: -1
       # Format the dedicated /boot partition.
       - id: fs-boot
         type: format
@@ -40,6 +34,19 @@ autoinstall:
         type: mount
         device: fs-boot
         path: /boot
+      # BIOS boot partition for legacy firmware on GPT disks.
+      - id: part-bios
+        type: partition
+        device: disk-install
+        size: 1M
+        flag: bios_grub
+        grub_device: true
+      # Create LVM volume group vg_sys from the remaining disk partition.
+      # Remaining disk space is reserved for LVM volumes.
+      - id: part-lvm
+        type: partition
+        device: disk-install
+        size: -1
       # LVM volume group aggregating space from part-lvm.
       - id: vg_sys
         type: lvm_volgroup
@@ -84,13 +91,6 @@ autoinstall:
         type: mount
         device: fs-home
         path: /home
-      # BIOS boot partition for legacy firmware on GPT disks.
-      - id: part-bios
-        type: partition
-        device: disk-install
-        size: 1M
-        flag: bios_grub
-        grub_device: true
   # Extra packages installed during autoinstall.
   packages:
     - ksh

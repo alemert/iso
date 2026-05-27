@@ -209,6 +209,7 @@ reorder_storage_config() {
   local -a sorted_indices=()
   local -a resolved_ids=()
   local idx id dep progress unresolved
+  local item_type item_size item_device other_idx other_type other_device
 
   for ((idx = 0; idx < count; idx++)); do
     pending_indices+=("$idx")
@@ -242,6 +243,29 @@ reorder_storage_config() {
             break
           fi
         done < <(yq eval ".autoinstall.storage.config[$idx].devices[]" "$file" 2>/dev/null || true)
+      fi
+
+      if [[ "$unresolved" -eq 0 ]]; then
+        item_type="$(yq eval ".autoinstall.storage.config[$idx].type // \"\"" "$file")"
+        item_size="$(yq eval ".autoinstall.storage.config[$idx].size // \"\"" "$file")"
+        item_device="$(yq eval ".autoinstall.storage.config[$idx].device // \"\"" "$file")"
+
+        # curtin requires size -1 partition to be the last partition on that disk.
+        if [[ "$item_type" == "partition" && "$item_size" == "-1" && -n "$item_device" ]]; then
+          for other_idx in "${pending_indices[@]}"; do
+            if [[ "$other_idx" == "$idx" ]]; then
+              continue
+            fi
+
+            other_type="$(yq eval ".autoinstall.storage.config[$other_idx].type // \"\"" "$file")"
+            other_device="$(yq eval ".autoinstall.storage.config[$other_idx].device // \"\"" "$file")"
+
+            if [[ "$other_type" == "partition" && "$other_device" == "$item_device" ]]; then
+              unresolved=1
+              break
+            fi
+          done
+        fi
       fi
 
       if [[ "$unresolved" -eq 0 ]]; then
