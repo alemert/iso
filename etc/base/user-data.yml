@@ -111,5 +111,15 @@ autoinstall:
 
   # Post-install maintenance commands executed inside the target system.
   late-commands:
+    # Refresh package index and apply upgrades before first boot.
     - curtin in-target --target=/target -- apt-get update
     - curtin in-target --target=/target -- env DEBIAN_FRONTEND=noninteractive apt-get -y upgrade
+
+    # Create and activate a persistent swap file.
+    - curtin in-target --target=/target -- fallocate -l 4G /swapfile
+    - curtin in-target --target=/target -- chmod 600 /swapfile
+    - curtin in-target --target=/target -- mkswap /swapfile
+    - curtin in-target --target=/target -- swapon /swapfile
+
+    # Ensure swap is enabled automatically after reboot.
+    - curtin in-target --target=/target -- sh -c 'grep -q "^/swapfile " /etc/fstab || echo "/swapfile none swap sw 0 0" >> /etc/fstab'

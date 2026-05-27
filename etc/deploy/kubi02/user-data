@@ -24,12 +24,6 @@ autoinstall:
         type: partition
         device: disk-install
         size: 1G
-      # Create LVM volume group vg_sys from the remaining disk partition.
-      # Remaining disk space is reserved for LVM volumes.
-      - id: part-lvm
-        type: partition
-        device: disk-install
-        size: -1
       # Format the dedicated /boot partition.
       - id: fs-boot
         type: format
@@ -40,6 +34,19 @@ autoinstall:
         type: mount
         device: fs-boot
         path: /boot
+      # BIOS boot partition for legacy firmware on GPT disks.
+      - id: part-bios
+        type: partition
+        device: disk-install
+        size: 1M
+        flag: bios_grub
+        grub_device: true
+      # Create LVM volume group vg_sys from the remaining disk partition.
+      # Remaining disk space is reserved for LVM volumes.
+      - id: part-lvm
+        type: partition
+        device: disk-install
+        size: -1
       # LVM volume group aggregating space from part-lvm.
       - id: vg_sys
         type: lvm_volgroup
@@ -84,13 +91,6 @@ autoinstall:
         type: mount
         device: fs-home
         path: /home
-      # BIOS boot partition for legacy firmware on GPT disks.
-      - id: part-bios
-        type: partition
-        device: disk-install
-        size: 1M
-        flag: bios_grub
-        grub_device: true
   # Extra packages installed during autoinstall.
   packages:
     - ksh
@@ -102,8 +102,16 @@ autoinstall:
       - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINfSQ+TlXJtasYD4fhuja7tZu7PqiOQ4FR+G2Zc3TUYw ales@lpfunk29
   # Post-install maintenance commands executed inside the target system.
   late-commands:
+    # Refresh package index and apply upgrades before first boot.
     - curtin in-target --target=/target -- apt-get update
     - curtin in-target --target=/target -- env DEBIAN_FRONTEND=noninteractive apt-get -y upgrade
+    # Create and activate a persistent swap file.
+    - curtin in-target --target=/target -- fallocate -l 4G /swapfile
+    - curtin in-target --target=/target -- chmod 600 /swapfile
+    - curtin in-target --target=/target -- mkswap /swapfile
+    - curtin in-target --target=/target -- swapon /swapfile
+    # Ensure swap is enabled automatically after reboot.
+    - curtin in-target --target=/target -- sh -c 'grep -q "^/swapfile " /etc/fstab || echo "/swapfile none swap sw 0 0" >> /etc/fstab'
   grub:
     reorder_uefi: false # Legacy BIOS profile keeps UEFI reorder disabled
   network:
