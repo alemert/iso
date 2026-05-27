@@ -181,6 +181,101 @@ normalize_doc() {
 normalize_doc "${HOST_USER_FILE:-$HOST_LEGACY_FILE}" "user-data" "$TMP_USER"
 normalize_doc "${HOST_META_FILE:-$HOST_LEGACY_FILE}" "meta-data" "$TMP_META"
 
+has_value() {
+  local needle="$1"
+  shift || true
+
+  local value
+  for value in "$@"; do
+    if [[ "$value" == "$needle" ]]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+reorder_storage_config() {
+  local file="$1"
+  local count
+
+  count="$(yq eval '.autoinstall.storage.config | length' "$file")"
+  if [[ "$count" == "null" || "$count" -eq 0 ]]; then
+    return 0
+  fi
+
+  local -a all_ids=()
+  local -a pending_indices=()
+  local -a sorted_indices=()
+  local -a resolved_ids=()
+  local idx id dep progress unresolved
+
+  for ((idx = 0; idx < count; idx++)); do
+    pending_indices+=("$idx")
+    id="$(yq eval ".autoinstall.storage.config[$idx].id // \"\"" "$file")"
+    if [[ -n "$id" ]]; then
+      all_ids+=("$id")
+    fi
+  done
+
+  while [[ ${#pending_indices[@]} -gt 0 ]]; do
+    progress=0
+    local -a next_pending=()
+
+    for idx in "${pending_indices[@]}"; do
+      unresolved=0
+
+      for dep in \
+        "$(yq eval ".autoinstall.storage.config[$idx].device // \"\"" "$file")" \
+        "$(yq eval ".autoinstall.storage.config[$idx].volume // \"\"" "$file")" \
+        "$(yq eval ".autoinstall.storage.config[$idx].volgroup // \"\"" "$file")"; do
+        if [[ -n "$dep" ]] && has_value "$dep" "${all_ids[@]}" && ! has_value "$dep" "${resolved_ids[@]}"; then
+          unresolved=1
+          break
+        fi
+      done
+
+      if [[ "$unresolved" -eq 0 ]]; then
+        while IFS= read -r dep; do
+          if [[ -n "$dep" ]] && has_value "$dep" "${all_ids[@]}" && ! has_value "$dep" "${resolved_ids[@]}"; then
+            unresolved=1
+            break
+          fi
+        done < <(yq eval ".autoinstall.storage.config[$idx].devices[]" "$file" 2>/dev/null || true)
+      fi
+
+      if [[ "$unresolved" -eq 0 ]]; then
+        sorted_indices+=("$idx")
+        id="$(yq eval ".autoinstall.storage.config[$idx].id // \"\"" "$file")"
+        if [[ -n "$id" ]]; then
+          resolved_ids+=("$id")
+        fi
+        progress=1
+      else
+        next_pending+=("$idx")
+      fi
+    done
+
+    if [[ "$progress" -eq 0 ]]; then
+      sorted_indices+=("${pending_indices[@]}")
+      break
+    fi
+
+    pending_indices=("${next_pending[@]}")
+  done
+
+  local reorder_expr='.autoinstall.storage.config = ['
+  for idx in "${sorted_indices[@]}"; do
+    reorder_expr+=".autoinstall.storage.config[$idx], "
+  done
+  reorder_expr="${reorder_expr%, } ]"
+
+  local tmp_out
+  tmp_out="$(mktemp)"
+  yq eval "$reorder_expr" "$file" > "$tmp_out"
+  mv "$tmp_out" "$file"
+}
+
 OUT_USER="$OUTPUT_DIR/user-data"
 OUT_META="$OUTPUT_DIR/meta-data"
 
@@ -208,6 +303,8 @@ USER_MERGE_FILES+=("$TMP_USER")
     )
   ' "${USER_MERGE_FILES[@]}"
 } > "$OUT_USER"
+
+reorder_storage_config "$OUT_USER"
 
 yq eval-all '. as $doc ireduce ({}; . * $doc)' "$META_BASE" "$TMP_META" > "$OUT_META"
 

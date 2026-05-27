@@ -13,23 +13,6 @@ autoinstall:
     password: '$6$/a6Tqfm2Ecsg9Ipo$UbPgXpRBQW8GJLJvCEziemU7samaDU8hMaCoWQpONgtn1yMnT3etHJ99KKw0RZppt0LfRQiGl0gXcsUqImmLn1'
   storage:
     config:
-      # EFI System Partition (ESP) for UEFI firmware and GRUB boot files.
-      - id: part-efi
-        type: partition
-        device: disk-install
-        size: 512M
-        flag: boot
-        grub_device: true
-      # Format the EFI partition as FAT32 (required for UEFI boot).
-      - id: fs-efi
-        type: format
-        volume: part-efi
-        fstype: fat32
-      # Mount the EFI partition to the standard UEFI path.
-      - id: mnt-efi
-        type: mount
-        device: fs-efi
-        path: /boot/efi
       # Use fixed install disk to avoid selecting USB installer media by size.
       - id: disk-install
         type: disk
@@ -101,6 +84,23 @@ autoinstall:
         type: mount
         device: fs-home
         path: /home
+      # EFI System Partition (ESP) for UEFI firmware and GRUB boot files.
+      - id: part-efi
+        type: partition
+        device: disk-install
+        size: 512M
+        flag: boot
+        grub_device: true
+      # Format the EFI partition as FAT32 (required for UEFI boot).
+      - id: fs-efi
+        type: format
+        volume: part-efi
+        fstype: fat32
+      # Mount the EFI partition to the standard UEFI path.
+      - id: mnt-efi
+        type: mount
+        device: fs-efi
+        path: /boot/efi
   # Extra packages installed during autoinstall.
   packages:
     - ksh
