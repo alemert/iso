@@ -73,6 +73,16 @@ autoinstall:
         name: lv_var
         volgroup: vg_sys
         size: 4G
+      - id: lv-varlog
+        type: lvm_partition
+        name: lv_varlog
+        volgroup: vg_sys
+        size: 2G
+      - id: lv-varlib
+        type: lvm_partition
+        name: lv_varlib
+        volgroup: vg_sys
+        size: 8G
       - id: lv-home
         type: lvm_partition
         name: lv_home
@@ -86,6 +96,14 @@ autoinstall:
         type: format
         volume: lv-var
         fstype: ext4
+      - id: fs-varlog
+        type: format
+        volume: lv-varlog
+        fstype: ext4
+      - id: fs-varlib
+        type: format
+        volume: lv-varlib
+        fstype: ext4
       - id: fs-home
         type: format
         volume: lv-home
@@ -98,6 +116,14 @@ autoinstall:
         type: mount
         device: fs-var
         path: /var
+      - id: mnt-varlog
+        type: mount
+        device: fs-varlog
+        path: /var/log
+      - id: mnt-varlib
+        type: mount
+        device: fs-varlib
+        path: /var/lib
       - id: mnt-home
         type: mount
         device: fs-home
