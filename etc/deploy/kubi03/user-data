@@ -19,6 +19,7 @@ autoinstall:
         ptable: gpt
         path: /dev/sda
         wipe: superblock-recursive
+        grub_device: true
       # Dedicated /boot partition for kernel and initramfs outside LVM.
       - id: part-boot
         type: partition

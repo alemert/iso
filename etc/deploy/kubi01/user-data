@@ -19,6 +19,7 @@ autoinstall:
         ptable: gpt
         path: /dev/sda
         wipe: superblock-recursive
+        grub_device: true
       # Dedicated /boot partition for kernel and initramfs outside LVM.
       - id: part-boot
         type: partition
@@ -40,7 +41,7 @@ autoinstall:
         device: disk-install
         size: 1M
         flag: bios_grub
-        grub_device: true
+        grub_device: false
       # Create LVM volume group vg_sys from the remaining disk partition.
       # Remaining disk space is reserved for LVM volumes.
       - id: part-lvm
@@ -102,8 +103,16 @@ autoinstall:
       - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINfSQ+TlXJtasYD4fhuja7tZu7PqiOQ4FR+G2Zc3TUYw ales@lpfunk29
   # Post-install maintenance commands executed inside the target system.
   late-commands:
+    # Refresh package index and apply upgrades before first boot.
     - curtin in-target --target=/target -- apt-get update
     - curtin in-target --target=/target -- env DEBIAN_FRONTEND=noninteractive apt-get -y upgrade
+    # Create and activate a persistent swap file.
+    - curtin in-target --target=/target -- fallocate -l 4G /swapfile
+    - curtin in-target --target=/target -- chmod 600 /swapfile
+    - curtin in-target --target=/target -- mkswap /swapfile
+    - curtin in-target --target=/target -- swapon /swapfile
+    # Ensure swap is enabled automatically after reboot.
+    - curtin in-target --target=/target -- sh -c 'grep -q "^/swapfile " /etc/fstab || echo "/swapfile none swap sw 0 0" >> /etc/fstab'
   grub:
     reorder_uefi: false # Legacy BIOS profile keeps UEFI reorder disabled
   network:

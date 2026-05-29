@@ -20,13 +20,6 @@ autoinstall:
         path: /dev/sda
         wipe: superblock-recursive
         grub_device: true
-      # BIOS boot partition for legacy firmware on GPT disks.
-      - id: part-bios
-        type: partition
-        device: disk-install
-        size: 1M
-        flag: bios_grub
-        grub_device: true
       # Dedicated /boot partition for kernel and initramfs outside LVM.
       - id: part-boot
         type: partition
@@ -42,6 +35,13 @@ autoinstall:
         type: mount
         device: fs-boot
         path: /boot
+      # BIOS boot partition for legacy firmware on GPT disks.
+      - id: part-bios
+        type: partition
+        device: disk-install
+        size: 1M
+        flag: bios_grub
+        grub_device: false
       # Create LVM volume group vg_sys from the remaining disk partition.
       # Remaining disk space is reserved for LVM volumes.
       - id: part-lvm

@@ -9,4 +9,4 @@ autoinstall:
         device: disk-install
         size: 1M
         flag: bios_grub
-        grub_device: true
+        grub_device: false
