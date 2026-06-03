@@ -149,6 +149,8 @@ autoinstall:
     - curtin in-target --target=/target -- swapon /swapfile
     # Ensure swap is enabled automatically after reboot.
     - curtin in-target --target=/target -- sh -c 'grep -q "^/swapfile " /etc/fstab || echo "/swapfile none swap sw 0 0" >> /etc/fstab'
+    # Prepare kubelet runtime directory.
+    - curtin in-target --target=/target -- mkdir -p /var/lib/{kubelet,kube-proxy}
   grub:
     reorder_uefi: true # UEFI profile prefers booting installed disk first
   network:
@@ -161,3 +163,12 @@ autoinstall:
         dhcp4-overrides:
           send-hostname: true
           hostname: kubi03
+# Template: create and run your own post-install script inside the target OS.
+# 1) Copy the two commands below and replace the script body with your logic.
+# 2) Keep EOF markers exactly as shown to preserve quoting.
+# - curtin in-target --target=/target -- bash -c 'cat > /usr/local/sbin/custom-postinstall.sh <<"EOF"
+#!/usr/bin/env bash
+#set -euo pipefail
+#echo "custom postinstall ran at $(date -Is)" >> /var/log/custom-postinstall.log
+#EOF'
+# - curtin in-target --target=/target -- bash -c 'chmod 0755 /usr/local/sbin/custom-postinstall.sh && /usr/local/sbin/custom-postinstall.sh'
