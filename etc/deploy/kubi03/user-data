@@ -151,6 +151,8 @@ autoinstall:
     - curtin in-target --target=/target -- sh -c 'grep -q "^/swapfile " /etc/fstab || echo "/swapfile none swap sw 0 0" >> /etc/fstab'
     # Prepare kubelet runtime directory.
     - curtin in-target --target=/target -- mkdir -p /var/lib/{kubelet,kube-proxy}
+    # Schedule a permanent nightly poweroff via cron.
+    - curtin in-target --target=/target -- sh -c 'echo "5 0 * * * /sbin/poweroff" | tee /etc/cron.d/nightly-poweroff >/dev/null'
   grub:
     reorder_uefi: true # UEFI profile prefers booting installed disk first
   network:

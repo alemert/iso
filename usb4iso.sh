@@ -331,6 +331,29 @@ if [[ -n "$USER_DATA_PATH" ]]; then
   echo "cloud-init seed written to $CIDATA_PART"
 fi
 
+# Relabel the ISO9660 volume on the target device as "<hostname>:<original>".
+# The volume id lives in the Primary Volume Descriptor at byte offset 32808
+# (sector 16 + 40 byte field offset), is 32 bytes long and space-padded.
+if [[ -n "$META_DATA_PATH" ]]; then
+  ISO_LABEL_OFFSET=32808
+  ISO_LABEL_LEN=32
+
+  # Derive the target hostname from the cloud-init meta-data seed.
+  SEED_HOSTNAME="$(awk -F': *' '/^local-hostname:/ {print $2; exit}' "$META_DATA_PATH" | tr -d '[:space:]')"
+
+  if [[ -n "$SEED_HOSTNAME" ]]; then
+    # Read the original ISO9660 volume id currently on the device.
+    ORIG_LABEL="$(dd if="$TARGET_DEV" bs=1 skip="$ISO_LABEL_OFFSET" count="$ISO_LABEL_LEN" 2>/dev/null | sed 's/ *$//')"
+    NEW_LABEL="$SEED_HOSTNAME:$ORIG_LABEL"
+
+    echo "Setting ISO9660 volume label to '$NEW_LABEL'..."
+    # Write the new label, space-padded and hard-truncated to 32 bytes.
+    printf '%-32.32s' "$NEW_LABEL" \
+      | dd of="$TARGET_DEV" bs=1 seek="$ISO_LABEL_OFFSET" count="$ISO_LABEL_LEN" conv=notrunc 2>/dev/null
+    sync
+  fi
+fi
+
 if [[ -n "$TMP_REMIX_ISO" && -f "$TMP_REMIX_ISO" ]]; then
   # Remove temporary remastered ISO artifact after writing USB.
   rm -f "$TMP_REMIX_ISO"

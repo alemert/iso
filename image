@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  sudo ./image -h <host> -b <bios|efi> -d <device>
+
+Options:
+  -h <host>     Target host: kubi01, kubi02 or kubi03
+  -b <mode>     Boot mode: bios or efi
+  -d <device>   Whole target block device to burn to (e.g. /dev/sdb), not a partition
+
+Examples:
+  sudo ./image -h kubi01 -b efi -d /dev/sdb
+  sudo ./image -h kubi03 -b bios -d /dev/sdb
+
+Notes:
+  - This builds the deployment config with build-deployment-config.sh
+    and burns the ISO with usb4iso.sh.
+  - This will ERASE all data on the target device.
+EOF
+}
+
+# Resolve repository directory so the script works from any CWD.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+ISO_PATH="$SCRIPT_DIR/download/ubuntu-26.04-live-server-amd64.iso"
+BUILD_SCRIPT="$SCRIPT_DIR/build-deployment-config.sh"
+USB_SCRIPT="$SCRIPT_DIR/usb4iso.sh"
+
+HOST=""
+BOOT_MODE=""
+DEVICE=""
+
+while getopts ":h:b:d:" opt; do
+  case "$opt" in
+    h) HOST="$OPTARG" ;;
+    b) BOOT_MODE="$OPTARG" ;;
+    d) DEVICE="$OPTARG" ;;
+    :)
+      echo "Error: option -$OPTARG requires an argument." >&2
+      usage
+      exit 1
+      ;;
+    \?)
+      echo "Error: invalid option -$OPTARG" >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+if [[ -z "$HOST" || -z "$BOOT_MODE" || -z "$DEVICE" ]]; then
+  usage
+  exit 1
+fi
+
+# Validate host.
+case "$HOST" in
+  kubi01|kubi02|kubi03) ;;
+  *)
+    echo "Error: invalid host '$HOST'. Expected kubi01, kubi02 or kubi03." >&2
+    exit 1
+    ;;
+esac
+
+# Validate boot mode.
+case "$BOOT_MODE" in
+  bios|efi) ;;
+  *)
+    echo "Error: invalid boot mode '$BOOT_MODE'. Expected bios or efi." >&2
+    exit 1
+    ;;
+esac
+
+# Burning requires root because usb4iso.sh writes raw disk data.
+if [[ "$EUID" -ne 0 ]]; then
+  echo "Error: run this script as root (use sudo)." >&2
+  exit 1
+fi
+
+if [[ ! -f "$ISO_PATH" ]]; then
+  echo "Error: ISO not found: $ISO_PATH" >&2
+  exit 1
+fi
+
+# Build the per-host deployment config (user-data + meta-data).
+echo "Building deployment config for '$HOST' ($BOOT_MODE)..."
+"$BUILD_SCRIPT" -h "$HOST" -b "$BOOT_MODE" -c "$SCRIPT_DIR/etc"
+
+DEPLOY_DIR="$SCRIPT_DIR/etc/deploy/$HOST"
+USER_DATA="$DEPLOY_DIR/user-data"
+META_DATA="$DEPLOY_DIR/meta-data"
+
+# Burn the ISO and inject the cloud-init seed.
+echo "Burning ISO to '$DEVICE'..."
+"$USB_SCRIPT" -i "$ISO_PATH" -d "$DEVICE" -u "$USER_DATA" -m "$META_DATA"
