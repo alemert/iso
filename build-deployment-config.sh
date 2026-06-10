@@ -297,7 +297,11 @@ reorder_storage_config() {
   local tmp_out
   tmp_out="$(mktemp)"
   yq eval "$reorder_expr" "$file" > "$tmp_out"
-  mv "$tmp_out" "$file"
+  # Write back into the existing file instead of moving the temp file in.
+  # mktemp creates 0600 files (and a cross-filesystem mv would copy that mode
+  # and ownership onto $file), so use cat to preserve $file's owner/permissions.
+  cat "$tmp_out" > "$file"
+  rm -f "$tmp_out"
 }
 
 OUT_USER="$OUTPUT_DIR/user-data"

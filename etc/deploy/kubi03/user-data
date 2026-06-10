@@ -142,6 +142,13 @@ autoinstall:
     # Refresh package index and apply upgrades before first boot.
     - curtin in-target --target=/target -- apt-get update
     - curtin in-target --target=/target -- env DEBIAN_FRONTEND=noninteractive apt-get -y upgrade
+    # Authorize the same SSH key for the root user.
+    - curtin in-target --target=/target -- install -d -m 0700 -o root -g root /root/.ssh
+    - curtin in-target --target=/target -- sh -c 'echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINfSQ+TlXJtasYD4fhuja7tZu7PqiOQ4FR+G2Zc3TUYw ales@lpfunk29" > /root/.ssh/authorized_keys'
+    - curtin in-target --target=/target -- chmod 0600 /root/.ssh/authorized_keys
+    - curtin in-target --target=/target -- chown root:root /root/.ssh/authorized_keys
+    # Permit SSH login as root using the authorized key (key-only, no password).
+    - curtin in-target --target=/target -- sh -c 'echo "PermitRootLogin prohibit-password" > /etc/ssh/sshd_config.d/10-root-login.conf'
     # Create and activate a persistent swap file.
     - curtin in-target --target=/target -- fallocate -l 4G /swapfile
     - curtin in-target --target=/target -- chmod 600 /swapfile
