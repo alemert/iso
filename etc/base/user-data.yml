@@ -170,7 +170,7 @@ autoinstall:
     - curtin in-target --target=/target -- mkdir -p /var/lib/{kubelet,kube-proxy}
 
     # Schedule a permanent nightly poweroff via cron.
-    - curtin in-target --target=/target -- sh -c 'echo "5 0 * * * /sbin/poweroff" | tee /etc/cron.d/nightly-poweroff >/dev/null'
+    - curtin in-target --target=/target -- sh -c 'echo "5 0 * * * root /sbin/poweroff" | tee /etc/cron.d/nightly-poweroff >/dev/null'
 
     # Template: create and run your own post-install script inside the target OS.
     # 1) Copy the two commands below and replace the script body with your logic.

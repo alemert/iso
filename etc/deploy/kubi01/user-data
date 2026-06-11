@@ -149,7 +149,7 @@ autoinstall:
     # Prepare kubelet runtime directory.
     - curtin in-target --target=/target -- mkdir -p /var/lib/{kubelet,kube-proxy}
     # Schedule a permanent nightly poweroff via cron.
-    - curtin in-target --target=/target -- sh -c 'echo "5 0 * * * /sbin/poweroff" | tee /etc/cron.d/nightly-poweroff >/dev/null'
+    - curtin in-target --target=/target -- sh -c 'echo "5 0 * * * root /sbin/poweroff" | tee /etc/cron.d/nightly-poweroff >/dev/null'
   grub:
     reorder_uefi: false # Legacy BIOS profile keeps UEFI reorder disabled
   network:

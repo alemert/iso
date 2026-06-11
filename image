@@ -6,15 +6,18 @@ usage() {
   cat <<'EOF'
 Usage:
   sudo ./image -h <host> -b <bios|efi> -d <device>
+  ./image -s
 
 Options:
   -h <host>     Target host: kubi01, kubi02 or kubi03
   -b <mode>     Boot mode: bios or efi
   -d <device>   Whole target block device to burn to (e.g. /dev/sdb), not a partition
+  -s            Show available USB block devices and exit
 
 Examples:
   sudo ./image -h kubi01 -b efi -d /dev/sdb
   sudo ./image -h kubi03 -b bios -d /dev/sdb
+  ./image -s
 
 Notes:
   - This builds the deployment config with build-deployment-config.sh
@@ -33,12 +36,14 @@ USB_SCRIPT="$SCRIPT_DIR/usb4iso.sh"
 HOST=""
 BOOT_MODE=""
 DEVICE=""
+SHOW_DEVICES=false
 
-while getopts ":h:b:d:" opt; do
+while getopts ":h:b:d:s" opt; do
   case "$opt" in
     h) HOST="$OPTARG" ;;
     b) BOOT_MODE="$OPTARG" ;;
     d) DEVICE="$OPTARG" ;;
+    s) SHOW_DEVICES=true ;;
     :)
       echo "Error: option -$OPTARG requires an argument." >&2
       usage
@@ -51,6 +56,12 @@ while getopts ":h:b:d:" opt; do
       ;;
   esac
 done
+
+# Show available USB block devices and exit.
+if [[ "$SHOW_DEVICES" == true ]]; then
+  lsblk -o NAME,TRAN,LABEL,FSTYPE | grep usb || true
+  exit 0
+fi
 
 if [[ -z "$HOST" || -z "$BOOT_MODE" || -z "$DEVICE" ]]; then
   usage
@@ -96,4 +107,4 @@ META_DATA="$DEPLOY_DIR/meta-data"
 
 # Burn the ISO and inject the cloud-init seed.
 echo "Burning ISO to '$DEVICE'..."
-"$USB_SCRIPT" -i "$ISO_PATH" -d "$DEVICE" -u "$USER_DATA" -m "$META_DATA"
+echo "YES" | "$USB_SCRIPT" -i "$ISO_PATH" -d "$DEVICE" -u "$USER_DATA" -m "$META_DATA"
