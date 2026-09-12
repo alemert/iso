@@ -22,6 +22,28 @@ Use a layered configuration model:
 	- `etc/hosts/<host>.yml` with top-level `user-data` and `meta-data`
 - `build-deployment-config.sh`: merges base + host overrides into deployable files
 
+#### user-data
+used to set
+- `autoinstall.version`: autoinstall configuration version.
+- `autoinstall.shutdown`: power state after installation, such as `poweroff`.
+- `autoinstall.locale`: system locale.
+- `autoinstall.keyboard`: keyboard layout and variant.
+- `autoinstall.identity`: initial hostname, username, and password hash. Generate a compatible SHA-512 password hash with:
+
+	```bash
+	openssl passwd -6
+	```
+
+	Enter the password when prompted, then copy the resulting `$6$...` value into `identity.password` in `user-data.yml`. Do not commit the plain-text password.
+- `autoinstall.storage`: installation disk, partition table, partitions, filesystems, mount points, and LVM volumes.
+- `autoinstall.packages`: additional packages installed during installation.
+- `autoinstall.ssh`: SSH server installation, default enablement, and authorized keys.
+- `autoinstall.late-commands`: commands run in the installed target system before the first boot.
+- Custom post-install commands: scripts and configuration files created by `late-commands`.
+
+#### meta-data
+used to set hostname 
+
 ### Build host deployment config
 
 ```bash
