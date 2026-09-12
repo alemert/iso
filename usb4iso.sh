@@ -182,6 +182,7 @@ require_cmd wipefs
 require_cmd mkfs.vfat
 require_cmd mount
 require_cmd umount
+require_cmd udisksctl
 
 # Ensure the provided ISO file exists before proceeding.
 if [[ ! -f "$ISO_PATH" ]]; then
@@ -358,6 +359,10 @@ if [[ -n "$TMP_REMIX_ISO" && -f "$TMP_REMIX_ISO" ]]; then
   # Remove temporary remastered ISO artifact after writing USB.
   rm -f "$TMP_REMIX_ISO"
 fi
+
+sync
+echo "Powering off $TARGET_DEV..."
+udisksctl power-off -b "$TARGET_DEV"
 
 echo
 echo "Done. Bootable USB created on $TARGET_DEV."

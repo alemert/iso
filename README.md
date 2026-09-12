@@ -52,6 +52,12 @@ used to set hostname
 
 ### Build host deployment config
 
+| Host | Boot mode |
+| --- | --- |
+| kubi01 | BIOS |
+| kubi02 | BIOS |
+| kubi03 | EFI |
+
 ```bash
 ./build-deployment-config.sh -h kubi03
 ```
