@@ -2,6 +2,12 @@
 
 This repository builds an autoinstall USB and can attach a cloud-init seed.
 
+## Download the Ubuntu ISO
+
+Download the `ubuntu-*-live-server-amd64.iso` image from the official Ubuntu releases site:
+
+<https://releases.ubuntu.com/>
+
 ## Host-agnostic cloud-init workflow
 
 Use a layered configuration model:
