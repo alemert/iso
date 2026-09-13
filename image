@@ -29,7 +29,7 @@ EOF
 # Resolve repository directory so the script works from any CWD.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-ISO_PATH="$SCRIPT_DIR/download/ubuntu-26.04-live-server-amd64.iso"
+ISO_PATH="$SCRIPT_DIR/download/ubuntu-26.04.1-live-server-amd64.iso"
 BUILD_SCRIPT="$SCRIPT_DIR/build-deployment-config.sh"
 USB_SCRIPT="$SCRIPT_DIR/usb4iso.sh"
 
